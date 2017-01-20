@@ -74,6 +74,74 @@ class FileSystem
   end
 
   class ChunkedBlock < Block
+    
   end
 
 end
+
+
+class FileSystem
+  module Chunk
+    class << Chunk
+      def [](size:0, unpack:"")
+        s = unless klasss[size]
+          klasss[size] = {unpack=>nil} 
+        else
+          klasss[size]
+        end
+
+        if c = s[unpack] then
+          c
+        else
+          newc = Class.new
+          newc.send(:define_method, :initialize){|block: nil, index: 0|
+              @size = size
+              @unpack = unpack
+              @block = block
+              @index = index  # on block
+              @base_on_block = index * @size
+          }
+          newc.send(:attr_reader, *[:size, :unpack, :block, :index, :base_on_block])
+          newc.include(FileSystem::Chunk)
+          s[unpack] = newc
+          newc
+        end
+      end
+
+      private
+      attr_writer :klasss
+      def klasss
+        @klasss = {} unless defined? @klasss
+        @klasss
+      end
+    end
+
+    def to_onblock(f,l)
+      (f+@base_on_block)..(l+@base_on_block)
+    end
+
+  end
+end
+
+
+class FileSystem
+
+  class SuperBlockChunk  < FileSystem::Chunk[size: 28, unpack: "I7"]
+    # initialize |block: nil, index: 0|
+
+    _methods = %w[size nblocks ninodes nlog logstart inodestart bmapstart]
+    (0...28).step(4).each{|s|
+      define_method(_methods[s/4])do
+        @block[to_onblock(s, s+3), unpack:?I].first
+      end
+
+      define_method(_methods[s/4] + ?=)do |v|
+        @block[to_onblock(s, s+3)] = v
+      end
+    }
+
+  end
+
+end
+
+
