@@ -19,8 +19,13 @@ class FileSystem
       @base = fs.block_size * @index
     end
 
-    def [](i)
+    def [](i, unpack: nil)
       range, size = check_range(i)
+
+      unless unpack.nil? then
+        return @fs.image[range].unpack(unpack)
+      end
+
       if type = SIZE_TYPE[size]
         @fs.image[range].unpack(type).first
       else
@@ -66,7 +71,9 @@ class FileSystem
     def little2num(l)
       l.each_with_index.map{|e, i| e * 256**i}.inject(:+)
     end
+  end
 
+  class ChunkedBlock < Block
   end
 
 end

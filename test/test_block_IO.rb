@@ -32,12 +32,14 @@ class Block_IO_Test < Test::Unit::TestCase
     assert_raise(Exception, "Index out of Block range"){
       @bl0[8]
     }
+    assert_equal([7], @bl0[7, unpack:"C"])
 
     assert_equal(16, @bl2[0])
     assert_equal(23, @bl2[7])
     assert_raise(Exception, "Index out of Block range"){
       @bl2[8]
     }
+    assert_equal([23], @bl2[7, unpack:"C"])
 
     # write
     img = image()
@@ -68,6 +70,8 @@ class Block_IO_Test < Test::Unit::TestCase
     assert_raise(Exception, "Index out of Block range"){
       @bl0[0..8]
     }
+    assert_equal(           [0x0706],     @bl0[-2..-1, unpack:"S"])
+    assert_equal(           [0x06, 0x07], @bl0[-2..-1, unpack:"C2"])
 
     assert_equal(             0x1110, @bl2[-8..1])
     assert_equal(         0x15141312, @bl2[2..-3])
@@ -76,6 +80,8 @@ class Block_IO_Test < Test::Unit::TestCase
     assert_raise(Exception, "Index out of Block range"){
       @bl2[0..8]
     }
+    assert_equal(           [0x1716],     @bl2[-2..-1, unpack:"S"])
+    assert_equal(           [0x16, 0x17], @bl2[-2..-1, unpack:"C2"])
   end
 
   test "range write2 test" do
