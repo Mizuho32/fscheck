@@ -13,13 +13,13 @@ class FileSystem
         else
           newc = Class.new
           newc.send(:define_method, :initialize){|block: nil, index: 0|
-              @size = size
+              @chunk_size = size
               @unpack = unpack
               @block = block
               @index = index  # on block
-              @base_on_block = index * @size
+              @base_on_block = index * @chunk_size
           }
-          newc.send(:attr_reader, *[:size, :unpack, :block, :index, :base_on_block])
+          newc.send(:attr_reader, *[:chunk_size, :unpack, :block, :index, :base_on_block])
           newc.include(FileSystem::Chunk)
           s[unpack] = newc
           newc
@@ -36,6 +36,10 @@ class FileSystem
 
     def to_onblock(f,l)
       (f+@base_on_block)..(l+@base_on_block)
+    end
+
+    def raw
+      @block.raw[@base_on_block...(@base_on_block+@chunk_size)]
     end
 
   end

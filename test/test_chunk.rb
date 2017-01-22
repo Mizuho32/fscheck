@@ -24,7 +24,7 @@ class Chunk_Test < Test::Unit::TestCase
     C2 = FileSystem::Chunk[size: 10, unpack:"hello"]
     c = C.new(block: nil, index: 1)
     assert_equal(C.object_id, C2.object_id)
-    assert_equal(10, c.size)
+    assert_equal(10, c.chunk_size)
     assert_equal("hello", c.unpack)
     assert_nil(c.block)
     assert_equal(1, c.index)

@@ -1,13 +1,4 @@
 class FileSystem
-
-  attr_accessor :image, :block_size
-
-  def initialize(image: nil, block_size: 512)
-    @image = image
-    @block_size = block_size
-  end
-
-
   class Block
     SIZE_TYPE = {1=>?C, 2=>?S, 4=>?I, 8=>?Q}
     attr_reader :index, :base, :fs
@@ -17,6 +8,10 @@ class FileSystem
       @fs = fs
       @index = index
       @base = fs.block_size * @index
+    end
+
+    def raw
+      @fs.image[@base..(@base+fs.block_size)]
     end
 
     def indexer(i, unpack: nil)
@@ -76,7 +71,7 @@ class FileSystem
         elsif -@fs.block_size <= e && e <= -1 then # ring
           @fs.block_size + e
         else
-          raise Exception.new("Index out of Block range")
+          raise Exception.new("Index out of Block range: #{e}")
         end
       }.each_slice(2).all?{|e| e.first <= e.last}
       return Range.new(*pair), pair.last - pair.first + 1
