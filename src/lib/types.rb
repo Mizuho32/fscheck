@@ -19,7 +19,7 @@ class FileSystem
       @base = fs.block_size * @index
     end
 
-    def [](i, unpack: nil)
+    def indexer(i, unpack: nil)
       range, size = check_range(i)
 
       unless unpack.nil? then
@@ -33,13 +33,42 @@ class FileSystem
       end
     end
 
-    def []=(i, v)
+    def indexer_asig(i, v)
       range, size = check_range(i)
       if type = SIZE_TYPE[size]
         @fs.image[range] = [v].pack(type)
       else
         @fs.image[range] = little_bytes(v, size).pack(?C + size.to_s)
       end
+    end
+
+    def [](i, unpack: nil) 
+      indexer(i, unpack: unpack)
+=begin
+      range, size = check_range(i)
+
+      unless unpack.nil? then
+        return @fs.image[range].unpack(unpack)
+      end
+
+      if type = SIZE_TYPE[size]
+        @fs.image[range].unpack(type).first
+      else
+        little2num( @fs.image[range].unpack(?C + size.to_s) )
+      end
+=end
+    end
+
+    def []=(i, v)
+      indexer_asig(i, v)
+=begin
+      range, size = check_range(i)
+      if type = SIZE_TYPE[size]
+        @fs.image[range] = [v].pack(type)
+      else
+        @fs.image[range] = little_bytes(v, size).pack(?C + size.to_s)
+      end
+=end
     end
 
     private
@@ -74,7 +103,20 @@ class FileSystem
   end
 
   class ChunkedBlock < Block
-    
+    def initialize(fs:nil, index: 0, klass: nil)
+      raise Exception.new("Chunk type Error of ChunkedBlock") unless klass < FileSystem::Chunk
+      @klass = klass
+
+      super(fs:fs, index:index)
+      @chunks = []
+    end
+
+    def [](i)
+      cur = @chunks[i]
+      cur = @chunks[i] = @klass.new(block: self, index: i) if cur.nil?
+      cur
+    end
+
   end
 
 end
@@ -132,11 +174,11 @@ class FileSystem
     _methods = %w[size nblocks ninodes nlog logstart inodestart bmapstart]
     (0...28).step(4).each{|s|
       define_method(_methods[s/4])do
-        @block[to_onblock(s, s+3), unpack:?I].first
+        @block.indexer(to_onblock(s, s+3), unpack:?I).first
       end
 
       define_method(_methods[s/4] + ?=)do |v|
-        @block[to_onblock(s, s+3)] = v
+        @block.send(:indexer_asig, to_onblock(s, s+3),  v)
       end
     }
 
