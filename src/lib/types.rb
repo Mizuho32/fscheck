@@ -33,8 +33,14 @@ class FileSystem
       end
     end
 
-    def indexer_asig(i, v)
+    def indexer_asig(i, v, pack: nil)
       range, size = check_range(i)
+
+      unless pack.nil? then
+        @fs.image[range] = v.pack(pack)
+        return
+      end
+
       if type = SIZE_TYPE[size]
         @fs.image[range] = [v].pack(type)
       else
@@ -46,8 +52,12 @@ class FileSystem
       indexer(i, unpack: unpack)
     end
 
-    def []=(i, v)
-      indexer_asig(i, v)
+    def []=(*i, v)
+      if i.size == 1 then
+        indexer_asig(*i, v)
+      else
+        indexer_asig(i.first, v, pack: i.last[:pack])
+      end
     end
 
     private
@@ -161,6 +171,31 @@ class FileSystem
       end
     }
 
+  end
+
+  class InodeBlockChunk < FileSystem::Chunk[size: 64, unpack: "ssssII13"]
+    _methods = %w[type major minor nlink size]
+    types = %w[s s s s I]
+    ranges = [0..1, 2..3, 4..5, 6..7, 8..11]
+    _methods.each_with_index{|name, i|
+      r = ranges[i]
+      t = types[i]
+      define_method(name)do
+        @block.indexer(to_onblock(r.first, r.last), unpack: t).first
+      end
+
+      define_method(name + ?=)do |v|
+        @block.send(:indexer_asig, to_onblock(r.first, r.last),  v)
+      end
+    }
+
+    def addrs
+      @block.indexer(to_onblock(12, 63), unpack: 'I13')
+    end
+
+    def addrs=(v)
+      @block.send(:indexer_asig, to_onblock(r.first, r.last),  v)
+    end
   end
 
 end

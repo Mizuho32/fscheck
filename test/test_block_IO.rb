@@ -24,7 +24,7 @@ class Block_IO_Test < Test::Unit::TestCase
     @bl0 = FileSystem::Block.new(fs: @fs)
     @bl2 = FileSystem::Block.new(fs: @fs, index: 2)
   end
-  
+
   test "single range access test" do
     # read
     assert_equal(0, @bl0[0])
@@ -139,6 +139,11 @@ class Block_IO_Test < Test::Unit::TestCase
     @bl2[-3..-1] = 0x114514
     img[21..23] = [0x14, 0x45, 0x11]
     assert_equal(img.pack("C*"), @fs.image)
+  end
+
+  test "range write pack test" do
+    @bl0[0..7, pack: 'S4'] = img = [0x1145, 0x8100, 0x9310, 0x1919]
+    assert_equal(img.map{|e| [e].pack("s")}.join , @fs.image[0..7])
   end
 
   test "Block index out of fs size test" do
