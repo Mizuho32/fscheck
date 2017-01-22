@@ -44,31 +44,10 @@ class FileSystem
 
     def [](i, unpack: nil) 
       indexer(i, unpack: unpack)
-=begin
-      range, size = check_range(i)
-
-      unless unpack.nil? then
-        return @fs.image[range].unpack(unpack)
-      end
-
-      if type = SIZE_TYPE[size]
-        @fs.image[range].unpack(type).first
-      else
-        little2num( @fs.image[range].unpack(?C + size.to_s) )
-      end
-=end
     end
 
     def []=(i, v)
       indexer_asig(i, v)
-=begin
-      range, size = check_range(i)
-      if type = SIZE_TYPE[size]
-        @fs.image[range] = [v].pack(type)
-      else
-        @fs.image[range] = little_bytes(v, size).pack(?C + size.to_s)
-      end
-=end
     end
 
     private
