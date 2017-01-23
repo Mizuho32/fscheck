@@ -75,9 +75,9 @@ module MainTest
       def startup 
         puts <<-"TEST"
 \e[96m
-############################
-# Block Use Coherence Test #
-############################
+  ############################
+  # Block Use Coherence Test #
+  ############################
 \e[0m
   TEST
         # correct bits
@@ -95,11 +95,11 @@ module MainTest
               []
             end
             if type==FileSystem::DinodeBlockChunk::T_DIR then # file name
+              dir_block = FileSystem::ChunkedBlock.new(fs: $fs, index: addrs[0], klass: FileSystem::DirectoryBlockChunk)
               #p addrs
               (0...32).each{|i| 
-                b = i*16
-                next if (inum = $fs[addrs[0]][b..b+1, unpack:"S"].first).zero?
-                puts "#{inum} #{$fs[addrs[0]][b+2..b+15, unpack:"a*"].first.strip}"
+                next if dir_block[i].inum.zero?
+                puts "#{dir_block[i].inum} #{dir_block[i].name}"
               }
             end
             #p indirect

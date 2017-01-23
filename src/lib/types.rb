@@ -3,11 +3,13 @@ require_relative 'block'
 require_relative 'chunk'
 require_relative 'superblock'
 require_relative 'inodeblock'
+require_relative 'directory'
 else
 load 'block.rb'
 load 'chunk.rb'
 load 'superblock.rb'
 load 'inodeblock.rb'
+load 'directory.rb'
 end
 
 class FileSystem
