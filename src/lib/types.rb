@@ -46,6 +46,18 @@ class FileSystem
   def [](i)
     cur = @blocks[i]
 
+    if Range === i then
+      any_nil = cur.any?(&:nil?)
+      raise Exception.new("Unable to access chunked block") if(@size_block.values.any?{|r| r.include?(i.max) || r.include?(i.min) } && any_nil)
+      if any_nil then
+        cur.each_with_index.each{|el, cur_i| @blocks[idx=(cur_i + i.first)] = FileSystem::Block.new(fs: self, index: idx) if el.nil?
+        }
+        return @blocks[i]
+      else
+        return cur
+      end
+    end
+
     raise Exception.new("Unable to access chunked block") if(@size_block.values.any?{|r| r.include?(i) } && cur.nil?)
 
     cur = @blocks[i] = FileSystem::Block.new(fs: self, index: i) if cur.nil?

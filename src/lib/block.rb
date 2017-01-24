@@ -6,7 +6,7 @@ class FileSystem
     def initialize(fs:nil, index: 0)
       raise Exception.new("Block index out of fs size") if fs.image.size/fs.block_size <= index
       @fs = fs
-      @index = index
+      @index = index 
       @base = fs.block_size * @index
     end
 
@@ -87,6 +87,8 @@ class FileSystem
   end
 
   class ChunkedBlock < Block
+    include Enumerable
+
     def initialize(fs:nil, index: 0, klass: nil)
       raise Exception.new("Chunk type Error of ChunkedBlock") unless klass < FileSystem::Chunk
       @klass = klass
@@ -99,6 +101,10 @@ class FileSystem
       cur = @chunks[i]
       cur = @chunks[i] = @klass.new(block: self, index: i) if cur.nil?
       cur
+    end
+
+    def each(&block)
+      (0...512/@klass.chunk_size).each{|i| block.call(self.[](i)) }
     end
 
   end

@@ -12,6 +12,9 @@ class FileSystem
           c
         else
           newc = Class.new
+          newc.send(:define_singleton_method, :chunk_size){
+            size
+          }
           newc.send(:define_method, :initialize){|block: nil, index: 0|
               @chunk_size = size
               @unpack = unpack

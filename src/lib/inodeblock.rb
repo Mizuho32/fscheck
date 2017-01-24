@@ -26,6 +26,19 @@ class FileSystem
       @block.send(:indexer_asig, to_onblock(r.first, r.last),  v)
     end
 
+    def inode_index
+      @index + (@block.index-32)*8
+    end
+
+    def all_addrs
+      indirect = unless (tail = addrs[12]).zero? then
+        $fs[tail][0..511, unpack:"I*"].select{|i| !i.zero? }
+      else
+        []
+      end
+      addrs[0...12].select{|i| !i.zero? } + indirect
+    end
+
   end
 
 end
