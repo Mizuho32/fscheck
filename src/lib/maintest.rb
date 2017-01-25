@@ -82,8 +82,10 @@ module MainTest
     end
 
 
-=begin
+#=begin
     test "bitmapblock: block use Test" do
+      puts "\n\e[93mBitmapblock: test\e[0m"
+
       used_from_inode = Init.used_from_inode.values.flatten + Init.tails_of_addrs
       used_from_bitmap = Init.bitmap_use
 
@@ -93,71 +95,101 @@ module MainTest
       puts "\n\e[92mBitmapblock: OK\e[0m"
     end
     test "inodeblock: used block must referenced from only one inode test" do
+      puts "\n\e[93mInodeblock: use test\e[0m"
       assert_true( Init.used_from_inode.group_by{|i| i}.delete_if{|k,v| v.one?}.keys.empty? )
-      puts "\n\e[92mInodeblock use OK\e[0m"
+      puts "\n\e[92mInodeblock: use OK\e[0m"
     end
 
     test "inodeblock: type test" do
-      Init.used_from_inode.keys.each{|inode|
+      puts "\n\e[93mInodeblock: type test\e[0m"
+
+      result = Init.used_from_inode.keys.map{|inode|
         type = inode.type
-        assert_true(1 <= type && type <= 3)
+        inum = inode.inode_index
+        unless 1 <= type && type <= 3 then
+          puts "\e[91m type of inode[#{inum}] is #{type}. FAILED\e[0m"
+          next(false)
+        end
 
         if type == FileSystem::DinodeBlockChunk::T_DEV then
-          assert_true(!inode.major.zero?)
-          assert_true(!inode.minor.zero?)
+          maj,min = inode.major, inode.minor
+          if maj.zero? || min.zero? then
+            puts "\e[91m major and minor of dev inode[#{inum}] is #{maj},#{min}. FAILED\e[0m"
+            next(false)
+          end
         end
+        true
       }
 
-      puts "\n\e[92mInodeblock type OK\e[0m"
+      assert_true( result.all? )
+      puts "\n\e[92mInodeblock: type OK\e[0m"
     end
 
     test "inodeblock: nlink test" do
+      puts "\n\e[93mInodeblock: nlink test\e[0m"
       inum_to_linkednum = Init.used_from_inode.keys
         .select{|inode| inode.type == FileSystem::DinodeBlockChunk::T_DIR}
         .inject({}){|hash, inode| # inode that points dir
           #p inode.nlink, inode.addrs,inode.size
-          adds = inode.addrs[0...12].select{|ad| !ad.zero? } + if inode.addrs[12].zero? then
-            []
-          else
-            $fs[addrs[12]][0..511, unpack: 'I*'].select{|ad| !ad.zero? }
-          end
-          inode_index = inode.index + (inode.block.index-32)*8
-          adds.each{|ad|
+          inode_index = inode.inode_index
+          inode.all_addrs.each{|ad|
               blk = FileSystem::ChunkedBlock.new(fs: $fs, index: ad, klass: FileSystem::DirectoryBlockChunk)
-              (0...32)
-                .select{|i| !blk[i].inum.zero?}
-                .map{|i| blk[i].inum}
-                .uniq # fixme?
+              blk
+                .select{|file| !file.inum.zero?}
+                .map{|file| file.inum}
                 .each{|inum|
                   hash[inum] = (hash[inum]||[]) << inode_index
                 }
-            }
+          }
           hash
         }
       #p inum_to_linkednum
       #p $fs.inodeblock[0][1].size
       #Init.inodes.each{|inode| puts "#{inode.nlink} #{inode.type}"}
 
-      inum_to_linkednum.each{|inode_index, linkednum|
-        assert_equal( linkednum.size, $fs.inodeblock[inode_index/8][inode_index%8].nlink )
+      result = inum_to_linkednum.map{|inode_index, linkednum|
+        inode = $fs.inodeblock[inode_index/8][inode_index%8]
+        nlink = inode.nlink
+        if inode.type == FileSystem::DinodeBlockChunk::T_DIR then
+          if linkednum.size - 1 == nlink then 
+            true
+          else
+            puts "\e[91m nlink of dir inode[#{inode_index}] is #{nlink} but dir inode[#{inode_index}] referenced from #{linkednum}. FAILED\e[0m"
+          end
+        else
+          if linkednum.size == nlink then 
+            true
+          else
+            puts "\e[91m nlink of inode[#{inode_index}] is #{nlink} but inode[#{inode_index}] referenced from #{linkednum}. FAILED\e[0m"
+          end
+        end
       }
 
-      puts "\n\e[92mInodeblock nlink OK\e[0m"
+      assert_true(result.all?)
+      puts "\n\e[92mInodeblock: nlink OK\e[0m"
     end
-=end
+#=end
     test "inodeblock: addrs and size test" do
-      Init.used_from_inode.each{|inode, addr|
+      puts "\n\e[93mInodeblock: addrs and size test\e[0m"
+
+      result = Init.used_from_inode.map{|inode, addr|
         #puts inode.inode_index
         #p addr, addr.size,  inode.size/512
-        assert_equal((inode.size/512.0).ceil, addr.size)
-        Init.coherent_inodes[inode.inode_index] = true
+        ceil = (inode.size/512.0).ceil 
+        if ceil ==  addr.size then
+          Init.coherent_inodes[inode.inode_index] = true
+        else
+          puts "\e[91m For inode[#{inode.inode_index}], addrs size is #{addr.size} and CEIL(size/BSIZE) is #{ceil}. FAILED\e[0m"
+        end
       }
-      #puts $fs[60..64].map{|b| b[0..511, unpack: 'a*']}.join("\n"+"#"*20+"\n")
-      puts "\n\e[92mInodeblock addrs and size OK\e[0m"
+
+      assert_true(result.all?)
+      puts "\n\e[92mInodeblock: addrs and size OK\e[0m"
     end
 
   end
 
+#=begin
   class Directory_Test < Test::Unit::TestCase
     self.test_order = :defined
 
@@ -184,7 +216,6 @@ TEST
       Init.coherent_inodes[num]
     end
 
-#=begin
     test "valid inode num referenced from directory test" do
       puts "\n\e[93mDirectory: valid inode num referenced from directory test\e[0m"
 
@@ -260,7 +291,6 @@ TEST
       puts "\n\e[92mDirectory: For nonroots, valid . and .. OK\e[0m\n"
       end
 
-#=end
     test "A directory referenced from parent and child's .. test" do
       puts "\n\e[93mA directory referenced from parent and child's .. test\e[0m"
 
@@ -337,6 +367,7 @@ TEST
     end
 
   end
+#=end
 
 
 
@@ -368,16 +399,12 @@ class Init
           end
 
           if type==FileSystem::DinodeBlockChunk::T_DIR then # file name
-            #dir_block = FileSystem::ChunkedBlock.new(fs: $fs, index: addrs[0], klass: FileSystem::DirectoryBlockChunk)
-            #p addrs
-            puts "dir:#{inode.inode_index}, nink=#{inode.nlink}"
+            #puts "dir:#{inode.inode_index}, nink=#{inode.nlink}"
             inode.all_addrs.select{|addr| !addr.zero?}.each{|addr| 
               dir_block = FileSystem::ChunkedBlock.new(klass: FileSystem::DirectoryBlockChunk, fs:$fs, index:addr)
               dir_block.select{|dir| !dir.inum.zero?}.each do |dir|
-                puts "\t#{dir.inum}\t#{dir.name}"
+                #puts "\t#{dir.inum}\t#{dir.name}"
               end
-              #next if dir_block[i].inum.zero?
-              #puts "#{dir_block[i].inum} #{dir_block[i].name}"
             }
           end
           @tails_of_addrs << tail unless tail.zero?
