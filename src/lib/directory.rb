@@ -10,7 +10,7 @@ class FileSystem
     end
 
     def name
-      @block.indexer(to_onblock(2, 15), unpack: 'a14').first
+      @block.indexer(to_onblock(2, 15), unpack: 'a14').first.strip
     end
 
     def name=(v)
@@ -18,6 +18,14 @@ class FileSystem
       @block.indexer_asig(to_onblock(2, 15),  [v], pack: "a14")
     end
 
-  end
+    def inspect
+      to_s
+    end
+    def to_s
+      <<-"S"
+<DirBlockChunk inum: #{inum}, name: #{name}>
+S
+    end
 
+  end
 end

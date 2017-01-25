@@ -39,6 +39,20 @@ class FileSystem
       addrs[0...12].select{|i| !i.zero? } + indirect
     end
 
+    def inspect
+      to_s
+    end
+    def to_s
+      <<-"S"
+inum:\t#{inode_index}
+type:\t#{type}
+major:\t#{major}
+minor:\t#{minor}
+nlink:\t#{nlink}
+size:\t#{size}
+addrs:\t#{addrs}
+S
+    end
   end
 
 end

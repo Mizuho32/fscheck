@@ -107,6 +107,13 @@ class FileSystem
       (0...512/@klass.chunk_size).each{|i| block.call(self.[](i)) }
     end
 
+    def inspect
+      to_s
+    end
+    def to_s
+      self.map(&:to_s).join("\n")
+    end
+
   end
 
 end
