@@ -159,6 +159,8 @@ module MainTest
   end
 
   class Directory_Test < Test::Unit::TestCase
+    self.test_order = :defined
+
     class << self
       def startup 
         puts <<-"TEST"
@@ -168,17 +170,24 @@ module MainTest
   ############################
 \e[0m
 TEST
+        @dir_inodes = Init.used_from_inode.keys.select{|inode| inode.type == FileSystem::DinodeBlockChunk::T_DIR }
+        @tmp = {}
       end
       
       def shutdown
       end
+
+      attr_reader :dir_inodes, :tmp
     end
 
     def valid_inode?(num)
       Init.coherent_inodes[num]
     end
 
+#=begin
     test "valid inode num referenced from directory test" do
+      puts "\n\e[93mDirectory: valid inode num referenced from directory test\e[0m"
+
       assert_true( 
         Init.used_from_inode
           .select{|inode, addrs| inode.type == FileSystem::DinodeBlockChunk::T_DIR}
@@ -190,8 +199,143 @@ TEST
             end
           }
       )
-      puts "\n\e[92mDirectory: valid inode num referenced from directory test\e[0m"
+      puts "\n\e[92mDirectory: valid inode num referenced from directory OK\e[0m\n"
     end
+
+    test "for root, valid . and .. test" do
+      puts "\n\e[93mDirectory: for root, valid . and .. test\e[0m"
+
+      root = Directory_Test.dir_inodes.select{|i| i.inode_index == 1}.first
+      files = root.all_addrs.inject([]){|o, addr| 
+        o + FileSystem::ChunkedBlock.new(fs:$fs, index: addr, klass:FileSystem::DirectoryBlockChunk).select{|file| !file.inum.zero?} 
+      }
+      result = files.select{|file| file.name == ?. || file.name == ".."}.map{|file|
+        inum = file.inum
+        if root.inode_index == inum then
+          true
+        else
+          puts "\e[91m #{file.name} of inode[#{root.inode_index}] invalid. (points #{inum} but #{root.inode_index} expected). FAILED\e[0m"
+        end
+      }
+      
+      assert_true( result.all? )
+      puts "\n\e[92mDirectory: For root, valid . and .. OK\e[0m\n"
+    end
+
+    test "for nonroots, valid . and .. test" do
+      puts "\n\e[93mDirectory: for nonroots, valid . and .. test\e[0m"
+
+      nonroots = Directory_Test.dir_inodes.select{|i| i.inode_index != 1}
+      result = nonroots.map{|dir|
+
+        dots = dir.all_addrs.inject([]){|o, addr| 
+            o + FileSystem::ChunkedBlock.new(fs:$fs, index: addr, klass:FileSystem::DirectoryBlockChunk).select{|file| !file.inum.zero?}
+          }
+          .select{|file| file.name == ?. || file.name == ".."}
+
+        dots.map{|dot|
+          inum = dot.inum
+          if dot.name == ?. then
+            if inum == dir.inode_index then
+              true
+            else
+              puts "\e[91m . of inode[#{dir.inode_index}] invalid. (points #{inum} but #{dir.inode_index} expected. FAILED.\e[0m"
+            end
+          else
+            parents_childs = $fs.inodeblock[inum/8][inum%8]
+              .all_addrs
+              .select{|a| !a.zero?}
+              .map{|a| FileSystem::ChunkedBlock.new(fs: $fs, index: a, klass: FileSystem::DirectoryBlockChunk)}
+            parent_includes_me = parents_childs.any?{|bl| bl.any?{|file| file.inum == dir.inode_index}}
+            if parent_includes_me then
+              true
+            else
+              puts "\e[91m .. of inode[#{dir.inode_index}] invalid. (points #{inum} but inode[#{inum}] doesnt include me(inode[#{dir.inode_index}]). FAILED\e[0m"
+            end
+          end
+        }.all?
+      }
+
+      assert_true(result.all?)
+      puts "\n\e[92mDirectory: For nonroots, valid . and .. OK\e[0m\n"
+      end
+
+#=end
+    test "A directory referenced from parent and child's .. test" do
+      puts "\n\e[93mA directory referenced from parent and child's .. test\e[0m"
+
+      # { .. => [inodes] }
+      #dotdot_points_inodes = Directory_Test.dir_inodes.group_by{|inode|
+        #$fs[inode.addrs[0]].raw.unpack("x2x14S").first
+      #}
+      # { childdir => [parentdirs] }
+      #childir_to_paredir = Directory_Test.dir_inodes.group_by{|inode|
+        #$fs[inode.addrs[0]].raw.unpack("x2x14S").first
+      #}
+      inum_dir_pair = Directory_Test.dir_inodes.inject({}){|ar,inode| ar[inode.inode_index] = inode; ar}
+      refed_refs_pair = Directory_Test.dir_inodes.inject({}){|h, inode|
+        #refed_dirs.each
+        inode.all_addrs
+          .select{|addr| !addr.zero?}
+          .map{|addr| FileSystem::ChunkedBlock.new(fs:$fs, index: addr, klass:FileSystem::DirectoryBlockChunk)}
+          .inject([]){|ar, bl| ar + bl.map{|file| inum_dir_pair[file.inum]}.compact }
+          .each{|refed_inode|
+            h[refed_inode] = (h[refed_inode]||[]) << inode
+          }
+        h
+      }
+
+      Directory_Test.tmp[:inode_child] = {}
+      result = Directory_Test.dir_inodes.map{|inode|
+        parent = $fs[inode.addrs[0]].raw.unpack("x2x14S").first # parent inum
+        children = inode.all_addrs
+          .select{|addr| !addr.zero?}
+          .map{|addr| FileSystem::ChunkedBlock.new(fs:$fs, index: addr, klass:FileSystem::DirectoryBlockChunk)}
+          .inject([]){|ar, bl| 
+            ar + bl.select{|file| 
+              name=file.name; inum_dir_pair[file.inum] && name != ?. && name != ".."
+            }.map{|file| file.inum }
+          }
+        current = inode.inode_index
+        family = [parent, current]+children
+
+        Directory_Test.tmp[:inode_child][inode] = children
+        
+        refs = refed_refs_pair[inode]
+        diff = refs.delete_if{|inode| family.include?(inode.inode_index)}
+
+        if diff.empty? then
+          true
+        else
+          puts "\e[91m None of parent, children, current inode(inode[#{diff.map{|i|i.inode_index}.join(", ")}]) points me(inode[#{inode.inode_index}]). FAILED\e[0m"
+        end
+      }
+        
+      #p refed_refs_pair
+
+      assert_true(result.all?)
+      puts "\n\e[92mDirectory: A directory referenced from parent and child's ..  OK\e[0m\n"
+    end
+
+    test ". not counted test" do
+      puts "\n\e[93m. not counted test\e[0m"
+
+      result = Directory_Test.dir_inodes.map{|inode|
+        chi = Directory_Test.tmp[:inode_child][inode].size
+        diff = (inode.nlink-1) - chi
+        if diff.zero? then
+          true
+        elsif diff > 0
+          puts "\e[91m nlink of inode[#{inode.inode_index}] too many. (#{inode.nlink} nlink, 1 parent and #{chi} children) FAILED\e[0m"
+        else # diff < 0
+          puts "\e[91m nlink of inode[#{inode.inode_index}] too few. (#{inode.nlink} nlink, 1 parent and #{chi} children)FAILED\e[0m"
+        end
+      }
+
+      assert_true(result.all?)
+      puts "\n\e[92mDirectory: . not counted OK\e[0m\n"
+    end
+
   end
 
 
@@ -224,12 +368,16 @@ class Init
           end
 
           if type==FileSystem::DinodeBlockChunk::T_DIR then # file name
-            puts "abs inode_index #{inode_index + block_index*8}"
-            dir_block = FileSystem::ChunkedBlock.new(fs: $fs, index: addrs[0], klass: FileSystem::DirectoryBlockChunk)
+            #dir_block = FileSystem::ChunkedBlock.new(fs: $fs, index: addrs[0], klass: FileSystem::DirectoryBlockChunk)
             #p addrs
-            (0...32).each{|i| 
-              next if dir_block[i].inum.zero?
-              puts "#{dir_block[i].inum} #{dir_block[i].name}"
+            puts "dir:#{inode.inode_index}, nink=#{inode.nlink}"
+            inode.all_addrs.select{|addr| !addr.zero?}.each{|addr| 
+              dir_block = FileSystem::ChunkedBlock.new(klass: FileSystem::DirectoryBlockChunk, fs:$fs, index:addr)
+              dir_block.select{|dir| !dir.inum.zero?}.each do |dir|
+                puts "\t#{dir.inum}\t#{dir.name}"
+              end
+              #next if dir_block[i].inum.zero?
+              #puts "#{dir_block[i].inum} #{dir_block[i].name}"
             }
           end
           @tails_of_addrs << tail unless tail.zero?
