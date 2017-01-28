@@ -4,7 +4,7 @@ class FileSystem
     attr_reader :index, :base, :fs
 
     def initialize(fs:nil, index: 0)
-      raise Exception.new("Block index out of fs size") if fs.image.size/fs.block_size <= index
+      raise Exception.new("Block index #{index} out of fs size(size:#{fs.image.size}, BSIZE: #{fs.block_size}, index: 0...#{fs.image.size/fs.block_size})") if fs.image.size/fs.block_size <= index
       @fs = fs
       @index = index 
       @base = fs.block_size * @index
