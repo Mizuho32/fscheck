@@ -10,7 +10,7 @@ module MainTest
   puts "\e[96m############## Main test ##############\e[0m",""
 
 #=begin
-  class SuperBlock_Test < Test::Unit::TestCase
+  class A_SuperBlock_Test < Test::Unit::TestCase
 
     class << self
       def startup 
@@ -88,7 +88,7 @@ module MainTest
 
 #=end
 
-  class BlockUse_Test < Test::Unit::TestCase
+  class B_BlockUse_Test < Test::Unit::TestCase
     self.test_order = :defined
 
     class << self
@@ -96,9 +96,9 @@ module MainTest
       def startup 
         puts <<-"TEST"
 \e[96m
-  ############################
-  # Block Use Coherence Test #
-  ############################
+  ######################################
+  # Block Use and inode Coherence Test #
+  ######################################
 \e[0m
   TEST
       end
@@ -115,8 +115,19 @@ module MainTest
       used_from_inode = Init.used_from_inode.values.flatten + Init.tails_of_addrs
       used_from_bitmap = Init.bitmap_use
 
-      assert_true( (used_from_bitmap-used_from_inode).empty? )
-      assert_true( (used_from_inode-used_from_bitmap).empty? )
+      tests = [
+        used_from_bitmap-used_from_inode,
+        used_from_inode-used_from_bitmap
+      ].map{|dif|
+        if dif.empty? then
+          true
+        else
+          puts "\e[91m Incoherent block use, block#{dif}. FAILED\e[0m"
+        end
+      }
+        
+      assert_true( tests.all? )
+      #assert_true( (used_from_inode-used_from_bitmap).empty? )
 
       puts "\n\e[92mBitmapblock: OK\e[0m"
     end
@@ -216,7 +227,7 @@ module MainTest
   end
 
 #=begin
-  class Directory_Test < Test::Unit::TestCase
+  class C_Directory_Test < Test::Unit::TestCase
     self.test_order = :defined
 
     class << self
@@ -262,7 +273,7 @@ TEST
     test "for root, valid . and .. test" do
       puts "\n\e[93mDirectory: for root, valid . and .. test\e[0m"
 
-      root = Directory_Test.dir_inodes.select{|i| i.inode_index == 1}.first
+      root = C_Directory_Test.dir_inodes.select{|i| i.inode_index == 1}.first
       files = root.all_addrs.inject([]){|o, addr| 
         o + FileSystem::ChunkedBlock.new(fs:$fs, index: addr, klass:FileSystem::DirectoryBlockChunk).select{|file| !file.inum.zero?} 
       }
@@ -282,7 +293,7 @@ TEST
     test "for nonroots, valid . and .. test" do
       puts "\n\e[93mDirectory: for nonroots, valid . and .. test\e[0m"
 
-      nonroots = Directory_Test.dir_inodes.select{|i| i.inode_index != 1}
+      nonroots = C_Directory_Test.dir_inodes.select{|i| i.inode_index != 1}
       result = nonroots.map{|dir|
 
         dots = dir.all_addrs.inject([]){|o, addr| 
@@ -328,8 +339,8 @@ TEST
       #childir_to_paredir = Directory_Test.dir_inodes.group_by{|inode|
         #$fs[inode.addrs[0]].raw.unpack("x2x14S").first
       #}
-      inum_dir_pair = Directory_Test.dir_inodes.inject({}){|ar,inode| ar[inode.inode_index] = inode; ar}
-      refed_refs_pair = Directory_Test.dir_inodes.inject({}){|h, inode|
+      inum_dir_pair = C_Directory_Test.dir_inodes.inject({}){|ar,inode| ar[inode.inode_index] = inode; ar}
+      refed_refs_pair = C_Directory_Test.dir_inodes.inject({}){|h, inode|
         #refed_dirs.each
         inode.all_addrs
           .select{|addr| !addr.zero?}
@@ -341,8 +352,8 @@ TEST
         h
       }
 
-      Directory_Test.tmp[:inode_child] = {}
-      result = Directory_Test.dir_inodes.map{|inode|
+      C_Directory_Test.tmp[:inode_child] = {}
+      result = C_Directory_Test.dir_inodes.map{|inode|
         parent = $fs[inode.addrs[0]].raw.unpack("x2x14S").first # parent inum
         children = inode.all_addrs
           .select{|addr| !addr.zero?}
@@ -355,7 +366,7 @@ TEST
         current = inode.inode_index
         family = [parent, current]+children
 
-        Directory_Test.tmp[:inode_child][inode] = children
+        C_Directory_Test.tmp[:inode_child][inode] = children
         
         refs = refed_refs_pair[inode]
         diff = refs.delete_if{|inode| family.include?(inode.inode_index)}
@@ -376,8 +387,8 @@ TEST
     test ". not counted test" do
       puts "\n\e[93mDirectory: . not counted test\e[0m"
 
-      result = Directory_Test.dir_inodes.map{|inode|
-        chi = Directory_Test.tmp[:inode_child][inode].size
+      result = C_Directory_Test.dir_inodes.map{|inode|
+        chi = C_Directory_Test.tmp[:inode_child][inode].size
         diff = (inode.nlink-1) - chi
         if diff.zero? then
           true
