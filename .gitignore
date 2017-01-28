@@ -6,6 +6,7 @@
 *.rbc
 *.old
 *.zip
+tags
 /.config
 /coverage/
 /InstalledFiles
