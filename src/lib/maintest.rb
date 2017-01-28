@@ -7,9 +7,9 @@ load 'types.rb'
 $fs = FileSystem.load_xv6_fs(fsimg: $image, block_size: 512, definition: {superblock: 1..1, inodeblock: 32..57})
 
 module MainTest
-  puts "############## Main test ##############",""
+  puts "\e[96m############## Main test ##############\e[0m",""
 
-=begin
+#=begin
   class SuperBlock_Test < Test::Unit::TestCase
 
     class << self
@@ -28,39 +28,65 @@ module MainTest
     end
     
     test "superblock size Test" do
+      puts "\n\e[93mSuperblock: size test \e[0m"
+
       assert_equal(1000, $fs.superblock[0][0].size)
-      puts "\n\e[92mSuperblock size: OK\e[0m"
+
+      puts "\n\e[92mSuperblock: size OK\e[0m"
     end
 
     test "superblock nblocks Test" do
+      puts "\n\e[93mSuperblock: nblocks test\e[0m"
+
       assert_equal(941, $fs.superblock[0][0].nblocks)
-      puts "\n\e[92mNblocks: OK\e[0m"
+
+      puts "\n\e[92mSuperblock: nblocks OK\e[0m"
     end
 
     test "superblock  ninodes Test" do
+      puts "\n\e[93mSuperblock: ninodes test\e[0m"
+
       assert_equal(200, $fs.superblock[0][0].ninodes)
+
+      puts "\n\e[92mSuperblock: ninodes OK\e[0m"
     end
 
     test "superblock nlog Test" do
+      puts "\n\e[93mSuperblock: nlog test\e[0m"
+
       assert_equal(30, $fs.superblock[0][0].nlog)
+
+      puts "\n\e[92mSuperblock: nlog OK\e[0m"
     end
 
     test "superblock logstart Test" do
+      puts "\n\e[93mSuperblock: logstart test\e[0m"
+
       assert_equal(2, $fs.superblock[0][0].logstart)
+
+      puts "\n\e[92mSuperblock: logstart OK\e[0m"
     end
 
     test "superblock inodestart Test" do
+      puts "\n\e[93mSuperblock: inodestart test\e[0m"
+
       assert_equal(32, $fs.superblock[0][0].inodestart)
+
+      puts "\n\e[92mSuperblock: inodestart OK\e[0m"
     end
 
     test "superblock bmapstart Test" do
+      puts "\n\e[93mSuperblock: bmapstart test\e[0m"
+
       assert_equal(58, $fs.superblock[0][0].bmapstart)
+
+      puts "\n\e[92mSuperblock: bmapstart OK\e[0m"
     end
 
   end
 
 
-=end
+#=end
 
   class BlockUse_Test < Test::Unit::TestCase
     self.test_order = :defined
@@ -292,7 +318,7 @@ TEST
       end
 
     test "A directory referenced from parent and child's .. test" do
-      puts "\n\e[93mA directory referenced from parent and child's .. test\e[0m"
+      puts "\n\e[93mDirectory: A directory referenced from parent and child's .. test\e[0m"
 
       # { .. => [inodes] }
       #dotdot_points_inodes = Directory_Test.dir_inodes.group_by{|inode|
@@ -348,7 +374,7 @@ TEST
     end
 
     test ". not counted test" do
-      puts "\n\e[93m. not counted test\e[0m"
+      puts "\n\e[93mDirectory: . not counted test\e[0m"
 
       result = Directory_Test.dir_inodes.map{|inode|
         chi = Directory_Test.tmp[:inode_child][inode].size
