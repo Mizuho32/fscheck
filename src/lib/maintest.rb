@@ -127,7 +127,6 @@ module MainTest
       }
         
       assert_true( tests.all? )
-      #assert_true( (used_from_inode-used_from_bitmap).empty? )
 
       puts "\n\e[92mBitmapblock: OK\e[0m"
     end
@@ -256,17 +255,23 @@ TEST
     test "valid inode num referenced from directory test" do
       puts "\n\e[93mDirectory: valid inode num referenced from directory test\e[0m"
 
-      assert_true( 
-        Init.used_from_inode
-          .select{|inode, addrs| inode.type == FileSystem::DinodeBlockChunk::T_DIR}
-          .values
-          .all?{|addrs| 
-            addrs.all? do |addr|
-              dirs = FileSystem::ChunkedBlock.new(fs:$fs, index: addr, klass:FileSystem::DirectoryBlockChunk)
-              dirs.select{|dir| !dir.inum.zero? }.all?{|dir| valid_inode?(dir.inum) } 
-            end
-          }
-      )
+        #.values
+      result = Init.used_from_inode
+        .select{|inode, addrs| inode.type == FileSystem::DinodeBlockChunk::T_DIR}
+        .map{|inode, addrs| 
+          addrs.map do |addr|
+            files = FileSystem::ChunkedBlock.new(fs:$fs, index: addr, klass:FileSystem::DirectoryBlockChunk)
+            files.select{|file| !file.inum.zero? }.map{|file| 
+              if valid_inode?(file.inum) then
+                true
+              else
+                puts "\e[91m invalid inode[#{file.inum}](filename: #{file.name}) referenced from inode[#{inode.inode_index}]. FAILED\e[0m"
+              end
+            } 
+          end
+        }
+
+      assert_true( result.flatten.all? )
       puts "\n\e[92mDirectory: valid inode num referenced from directory OK\e[0m\n"
     end
 
@@ -434,6 +439,7 @@ class Init
           else
             []
           end
+          #p indirect
 
           if type==FileSystem::DinodeBlockChunk::T_DIR then # file name
             #puts "dir:#{inode.inode_index}, nink=#{inode.nlink}"
