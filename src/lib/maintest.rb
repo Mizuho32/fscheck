@@ -112,7 +112,7 @@ module MainTest
     test "bitmapblock: block use Test" do
       puts "\n\e[93mBitmapblock: test\e[0m"
 
-      used_from_inode = Init.used_from_inode.values.flatten + Init.tails_of_addrs
+      used_from_inode = $fs.inodeblocks.map{|inode| inode.all_using_blocks }.flatten
       used_from_bitmap = Init.bitmap_use
 
       tests = [
@@ -429,36 +429,14 @@ class Init
 
       # inode 
       @tails_of_addrs = []
-      @used_from_inode = (0...26).inject({}){|o, block_index| 
-        (0...8).inject(o) do |o, inode_index|
-          next(o) if (type = (inode=$fs.inodeblock[block_index][inode_index]).type).zero?
-          addrs = inode.addrs
-          indirect = unless (tail = addrs[12]).zero? then
-            puts "#{tail} type#{type} inode_index#{block_index*8+inode_index}"
-            $fs[tail][0..511, unpack:"I*"].select{|i| !i.zero? }
-          else
-            []
-          end
-          #p indirect
-
-          if type==FileSystem::DinodeBlockChunk::T_DIR then # file name
-            #puts "dir:#{inode.inode_index}, nink=#{inode.nlink}"
-            inode.all_addrs.select{|addr| !addr.zero?}.each{|addr| 
-              dir_block = FileSystem::ChunkedBlock.new(klass: FileSystem::DirectoryBlockChunk, fs:$fs, index:addr)
-              dir_block.select{|dir| !dir.inum.zero?}.each do |dir|
-                #puts "\t#{dir.inum}\t#{dir.name}"
-              end
-            }
-          end
-          @tails_of_addrs << tail unless tail.zero?
-          o[inode] = addrs[0...12].select{|i| !i.zero? } + indirect
+      @used_from_inode = $fs.inodeblocks.inject({}){|o, inode|
+          next(o) if inode.type.zero?
+          o[inode] = inode.all_addrs
           o
-        end
       }
-
       @coherent_inodes = []
     end
-    attr_reader :bitmap_use, :used_from_inode, :tails_of_addrs, :coherent_inodes
+    attr_reader :bitmap_use, :used_from_inode, :coherent_inodes
   end
 end
 

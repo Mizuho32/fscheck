@@ -43,6 +43,17 @@ class FileSystem
     @blocks[@size_block[:inodeblock]]
   end
 
+  def inodeblocks
+    inodeblk = inodeblock()
+    @inodeblocks = @inodeblocks || Enumerator.new{|chunk|
+      (0...26).each do |block_index|
+        (0...8).each { |inode_index|
+          chunk << inodeblk[block_index][inode_index]
+        }
+      end
+    }
+  end
+
   def [](i)
     cur = @blocks[i]
 
