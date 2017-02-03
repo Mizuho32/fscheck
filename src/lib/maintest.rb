@@ -424,8 +424,9 @@ class Init
 
     def init
       # correct bits
-      @bitmap_use = (7...512).inject([]){|o, i|  o + useds($fs[58][i], i*8)}
-      (56..58).each{|i| @bitmap_use.delete i}
+      @bitmap_use = $fs.bitmapblock.each_with_index
+        .select{|bit, index| bit == 1 && index > 58}
+        .map{|bit, index| index}
 
       # inode 
       @tails_of_addrs = []

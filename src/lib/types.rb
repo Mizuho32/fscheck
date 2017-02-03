@@ -54,6 +54,17 @@ class FileSystem
     }
   end
 
+  def bitmapblock
+    bitmap = self.[](58)
+    @bitmapblock = @bitmapblock || Enumerator.new{|bit|
+      (0...512).each do |byte_index|
+        (0...8).each{|bit_shift|
+          bit << ( (bitmap[byte_index]>>bit_shift)&1 )
+        }
+      end
+    }
+  end
+
   def [](i)
     cur = @blocks[i]
 
