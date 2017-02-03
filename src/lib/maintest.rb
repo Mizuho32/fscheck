@@ -116,13 +116,13 @@ module MainTest
       used_from_bitmap = Init.bitmap_use
 
       tests = [
-        used_from_bitmap-used_from_inode,
-        used_from_inode-used_from_bitmap
-      ].map{|dif|
+        [used_from_bitmap-used_from_inode, "bitmap flagged but no use from inode" ], 
+        [used_from_inode-used_from_bitmap, "used from inode but no bitmap flag" ]
+      ].map{|(dif, msg)|
         if dif.empty? then
           true
         else
-          puts "\e[91m Incoherent block use, block#{dif}. FAILED\e[0m"
+          puts "\e[91m Incoherent block use, #{msg} block#{dif}. FAILED\e[0m"
         end
       }
         
