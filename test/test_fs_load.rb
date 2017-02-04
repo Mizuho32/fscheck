@@ -1,7 +1,7 @@
 require 'test/unit'
 require 'pp'
 
-require_relative '../src/lib/types'
+require_relative '../src/types'
 
 #Dir.chdir "test/"
 class LoadFS_Test < Test::Unit::TestCase

@@ -20,10 +20,6 @@ args =  OptionParser.new.instance_eval {
 }
 
 opt = ARGV.getopts("d")
-
-p args, opt
-
-
 $:.unshift(Pathname(__FILE__).dirname.expand_path.to_s + "/src")
 
 $imagepath = args.first || "image/fs.img"
