@@ -88,6 +88,7 @@ module MainTest
 
 #=end
 
+#=begin
   class B_BlockUse_Test < Test::Unit::TestCase
     self.test_order = :defined
 
@@ -108,7 +109,6 @@ module MainTest
     end
 
 
-#=begin
     test "bitmapblock: block use Test" do
       puts "\n\e[93mBitmapblock: test\e[0m"
 
@@ -130,10 +130,22 @@ module MainTest
 
       puts "\n\e[92mBitmapblock: OK\e[0m"
     end
+
     test "inodeblock: used block must referenced from only one inode test" do
-      puts "\n\e[93mInodeblock: use test\e[0m"
-      assert_true( Init.used_from_inode.group_by{|i| i}.delete_if{|k,v| v.one?}.keys.empty? )
-      puts "\n\e[92mInodeblock: use OK\e[0m"
+      puts "\n\e[93mInodeblock: duplicate block use test\e[0m"
+
+      dups = Init.used_from_inode
+        .inject({}){|h,(k,v)| 
+          v.each{|block| h[block] = (h[block]||[]) << k}
+          h
+        }
+        .delete_if{|k,v| v.one?}
+        .each{|block, inodes|
+          puts "\e[91m block[#{block}] is used by inode#{inodes.map{|inode| inode.inode_index}}. FAILED\e[0m"
+        }
+          
+      assert_true( dups.empty? )
+      puts "\n\e[92mInodeblock: no duplicate block use. OK\e[0m"
     end
 
     test "inodeblock: type test" do
@@ -204,7 +216,7 @@ module MainTest
       assert_true(result.all?)
       puts "\n\e[92mInodeblock: nlink OK\e[0m"
     end
-#=end
+
     test "inodeblock: addrs and size test" do
       puts "\n\e[93mInodeblock: addrs and size test\e[0m"
 
@@ -224,6 +236,7 @@ module MainTest
     end
 
   end
+#=end
 
 #=begin
   class C_Directory_Test < Test::Unit::TestCase
@@ -445,13 +458,16 @@ class Init
 
 
     def report
+      path = File.dirname($imagepath)
+      name = File.basename($imagepath, ".img")
+
       repo = <<-"REPO"
 <!DOCTYPE html>
 
 <html>
 	<head>
 		<meta charset="utf-8">
-		<title>fs07</title>
+		<title>#{name}</title>
 	</head>
 	<body>
     <pre>
@@ -483,10 +499,6 @@ Dirs:
   </body>
 </html>
 REPO
-      #puts repo
-      path = File.dirname($imagepath)
-      name = File.basename($imagepath, ".img")
-      #puts path, name
       File.write(path + "/html/" + name + ".html", repo)
     end
 
