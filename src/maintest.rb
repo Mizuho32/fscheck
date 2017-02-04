@@ -7,6 +7,8 @@ load 'report.rb'
 
 $fs = FileSystem.load_xv6_fs(fsimg: $image, block_size: 512, definition: {superblock: 1..1, inodeblock: 32..57})
 
+Report.init()
+
 module MainTest
   Report.puts "############## Main test ##############\n", :cyan
 
@@ -461,6 +463,5 @@ class Init
 end
 
 Init.init()
-Report.init()
 Test::Unit::AutoRunner.run
 Report.report()

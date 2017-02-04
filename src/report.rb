@@ -1,6 +1,7 @@
 module Report
   class << self
     def init
+      Kernel.puts "INIT"
       @report = ""
     end
 
