@@ -122,7 +122,7 @@ module MainTest
         if dif.empty? then
           true
         else
-          puts "\e[91m Incoherent block use, #{msg} block#{dif}. FAILED\e[0m"
+          puts "\e[91m Incoherent block#{dif} use, #{msg}. FAILED\e[0m"
         end
       }
         
@@ -418,10 +418,6 @@ end # module
 class Init
   class << Init
 
-    def useds(byte, base)
-      (0..7).select{|i| (byte>>i)&1 == 1}.map{|i| i + base}
-    end
-
     def init
       # correct bits
       @bitmap_use = $fs.bitmapblock.each_with_index
@@ -429,17 +425,74 @@ class Init
         .map{|bit, index| index}
 
       # inode 
-      @tails_of_addrs = []
       @used_from_inode = $fs.inodeblocks.inject({}){|o, inode|
           next(o) if inode.type.zero?
           o[inode] = inode.all_addrs
           o
       }
+
+      # dir init
+      @used_from_inode.keys
+        .select{|inode| inode.type == FileSystem::DinodeBlockChunk::T_DIR}
+        .each{|inode| 
+          inode.all_addrs.each do |block_index|
+            $fs.blocks[block_index] = FileSystem::ChunkedBlock.new(fs: $fs, index: block_index, klass:FileSystem::DirectoryBlockChunk)
+          end
+        }
       @coherent_inodes = []
     end
     attr_reader :bitmap_use, :used_from_inode, :coherent_inodes
+
+
+    def report
+      repo = <<-"REPO"
+<!DOCTYPE html>
+
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>fs07</title>
+	</head>
+	<body>
+    <pre>
+All bitmap flag
+#{@bitmap_use}
+
+All block use from inodes
+#{$fs.inodeblocks.map{|inode| inode.all_using_blocks}.flatten}
+
+Inodes:
+#{@used_from_inode.map{|inode, all_addrs|
+  inode.to_s + "all addrs:\n#{all_addrs}"
+}.join("\n\n")}
+
+Dirs:
+#{
+  @used_from_inode.keys
+    .select{|inode| inode.type == FileSystem::DinodeBlockChunk::T_DIR}
+    .map{|inode| 
+      "inum: #{inode.inode_index}\n" +
+      inode.all_addrs.map{|block_index|
+        $fs[block_index].select{|file| !file.inum.zero?}.map{|file|
+          "\t#{file.inum}: #{file.name}"
+        }.join("\n")
+      }.join("\n")
+    }.join("\n")
+}
+    <pre>
+  </body>
+</html>
+REPO
+      #puts repo
+      path = File.dirname($imagepath)
+      name = File.basename($imagepath, ".img")
+      #puts path, name
+      File.write(path + "/html/" + name + ".html", repo)
+    end
+
   end
 end
 
 Init.init()
 Test::Unit::AutoRunner.run
+#Init.report()
