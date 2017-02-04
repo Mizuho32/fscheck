@@ -3,7 +3,8 @@
 
 $DEBUG = true
 
-$image = File.binread(ARGV[0] || "../../image/fs.img")
+$imagepath = ARGV[0] || "../../image/fs.img"
+$image = File.binread($imagepath)
 
 loop do
   load 'maintest.rb'
