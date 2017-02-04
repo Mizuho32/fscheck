@@ -30,22 +30,20 @@ class FileSystem
       @index + (@block.index-32)*8
     end
 
-    def all_addrs
-      indirect = unless (tail = addrs[12]).zero? then
+    def indirect
+      unless (tail = addrs[12]).zero? then
         $fs[tail][0..511, unpack:"I*"].select{|i| !i.zero? }
       else
         []
       end
-      addrs[0...12].select{|i| !i.zero? } + indirect
+    end
+
+    def all_addrs
+      addrs[0...12].select{|i| !i.zero? } + indirect()
     end
 
     def all_using_blocks
-      indirect = unless (tail = addrs[12]).zero? then
-        $fs[tail][0..511, unpack:"I*"].select{|i| !i.zero? }
-      else
-        []
-      end
-      addrs[0..12].select{|i| !i.zero? } + indirect
+      addrs[0..12].select{|i| !i.zero? } + indirect()
     end
 
     def inspect
