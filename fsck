@@ -14,19 +14,49 @@ args =  OptionParser.new.instance_eval {
 
   %w[
     -d :debug\ mode
+    -a :check\all\ images\ under\ specified irectory
   ].each_slice(2){|ar| on(*ar)}
 
   parse(ARGV)
 }
 
-opt = ARGV.getopts("d")
+opt = ARGV.getopts("ad")
 $:.unshift(Pathname(__FILE__).dirname.expand_path.to_s + "/src")
 
-$imagepath = args.first || "image/fs.img"
-$image = File.binread($imagepath)
 
 if opt[?d] then
+  $imagepath = args.first || "image/fs.img"
+  $image = File.binread($imagepath)
   require_relative 'src/debug'
-else
+elsif opt[?a] then
+  load 'types.rb'
   load 'maintest.rb'
+
+  results = {}
+  dir = args.first || "image"
+  Dir::mkdir(dir + "/html") unless File.exist?(dir + "/html")
+  Dir::glob(dir + "/*.img").each{|path|
+    $imagepath = path
+    $image = File.binread($imagepath)
+    $fs = FileSystem.load_xv6_fs(fsimg: $image, block_size: 512, definition: {superblock: 1..1, inodeblock: 32..57})
+    
+    Init.init()
+    Test::Unit::AutoRunner.run
+    Report.report()
+    results[path] = $result
+  }
+
+  Report.all_report(results, dir + "/html/results.html")
+  #pp results
+  
+else
+  load 'types.rb'
+  load 'maintest.rb'
+
+  $imagepath = args.first || "image/fs.img"
+  $image = File.binread($imagepath)
+  $fs = FileSystem.load_xv6_fs(fsimg: $image, block_size: 512, definition: {superblock: 1..1, inodeblock: 32..57})
+
+  Init.run
+  Report.report()
 end

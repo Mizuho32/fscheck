@@ -1,16 +1,30 @@
+require 'test/unit'
+
 module Report
   class << self
     def init
-      Kernel.puts "INIT"
       @report = ""
     end
 
-    def puts(str, color=nil)
 
-      @report << %Q{<pre class="#{color}">}
+    def catch(name, &block)
+      begin
+        block.call
+      rescue Test::Unit::AssertionFailedError => failure
+        puts_report(failure.to_s.gsub(?<, "&lt;").gsub(?>, "&gt;"), :bold)
+        puts_report(name[/test: (.+)/, 1] + " failed\n", :red)
+        raise failure
+      end
+    end
 
+    def puts_report(str, color=nil)
+      @report << %Q{<pre class="#{color}">#{str}</pre>\n}
+      #@report << str + "</pre>\n"
+    end
+
+    def puts_color(str, color=nil)
       case(color)
-        when :red then
+        when :red then 
           print("\e[91m")
         when :blue then
           print("\e[94m")
@@ -24,12 +38,100 @@ module Report
         when :purple then
         when :pink then
           print("\e[95m")
+        when :bold then
+          print("\e[97m")
       end
 
       Kernel.puts(str)
-      @report << str + "</pre>\n"
 
       print "\e[0m"
+    end
+
+    def puts(str, color=nil)
+      puts_report(str, color)
+      puts_color(str, color)
+    end
+
+    def all_report(results, fullpath)
+       repo = <<-"REPO"
+<!DOCTYPE html>
+
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>#{name}</title>
+    <style type="text/css">
+      :root{
+        --red:    #fb0000;
+        --blue:   #0032fb;
+        --cyan:   #00e0fb;
+        --green:  #00fb23;
+        --yellow: #ffed56;
+        --orange: #ff8056;
+        --purple: #c856ff;
+        -failures-pink:   #ff56b9;
+        --black:  #000;
+        --white:  #fff;
+
+      }
+      .red{ color: var(--red);}
+      .blue{ color: var(--blue);}
+      .cyan{ color: var(--cyan);}
+      .green{ color: var(--green);}
+      .yellow{ color: var(--yellow);}
+      .orange{ color: var(--orange);}
+      .purple{ color: var(--purple);}
+      .pink{ color: var(--pink);}
+      .black{ color: var(--black);}
+      .white{ color: var(--white);}
+      .console{ background-color: #000; }
+      .bold{ 
+        color: var(--white);
+        font-weight: bold; 
+      }
+      a:link { color: #bbfffd; }
+      a:visited { color: #f1b2ff; }
+      a:hover { color: #fff; }
+    </style>
+	</head>
+	<body>
+    <h2>Test Result</h2>
+    <div class="console">
+    #{
+      Hash[results.sort].map{|img, result|
+        <<-"IMG"
+<div>
+  <h2 class="white"><a href="#{File.basename(img, ".img")+".html"}">#{img}</a></h2>
+#{
+  result.failures.map{|failure|
+    <<-"FAI"
+<pre class="yellow">
+#{failure.method_name}
+</pre>
+<pre class="red">
+#{failure.message.gsub(?<, "&lt;").gsub(?>, "&gt;")}
+</pre>
+<pre class="bold">
+#{failure.location.join("\n")}
+</pre>
+</br>
+    FAI
+  }.join("\n")
+}
+
+  <pre class="cyan">#{result.assertion_count} assertions, #{result.failures.size} failures</pre>
+  </br>
+</div>
+IMG
+      }.join("\n")
+    }
+    </div>
+  </body>
+</html>
+REPO
+      #Kernel.puts repo
+      File.write(fullpath, repo)
+     
     end
 
     def report
@@ -55,6 +157,9 @@ module Report
         --orange: #ff8056;
         --purple: #c856ff;
         --pink:   #ff56b9;
+        --black:  #000;
+        --white:  #fff;
+
       }
       .red{ color: var(--red);}
       .blue{ color: var(--blue);}
@@ -64,10 +169,17 @@ module Report
       .orange{ color: var(--orange);}
       .purple{ color: var(--purple);}
       .pink{ color: var(--pink);}
+      .black{ color: var(--black);}
+      .white{ color: var(--white);}
       .console{ background-color: #000; }
+      .bold{ 
+        color: var(--white);
+        font-weight: bold; 
+      }
     </style>
 	</head>
 	<body>
+    <h2>Test Result</h2>
     <div class="console">
     #{@report}
     </div>
@@ -103,6 +215,7 @@ Dirs:
 REPO
       #Kernel.puts repo
       File.write(path + "/html/" + name + ".html", repo)
+      @report = ""
     end
   end
 end

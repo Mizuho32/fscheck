@@ -4,8 +4,7 @@
 $DEBUG = true
 
 loop do
-  load 'maintest.rb'
-  #require 'maintest'
+  load 'debug_main.rb'
   puts "\n"*3
   $stdin.gets
 end
