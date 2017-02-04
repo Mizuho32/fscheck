@@ -3,11 +3,9 @@
 
 $DEBUG = true
 
-$imagepath = ARGV[0] || "../../image/fs.img"
-$image = File.binread($imagepath)
-
 loop do
   load 'maintest.rb'
+  #require 'maintest'
   puts "\n"*3
   $stdin.gets
 end

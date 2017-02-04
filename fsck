@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby
+
+# coding:utf-8
+
+require 'optparse'
+require 'pp'
+require 'pathname'
+
+ARGV << '--help' if ARGV.empty?
+
+args =  OptionParser.new.instance_eval {
+  self.banner = 'Usage: fsck [options] fs.img'
+  self.summary_width = 2
+
+  %w[
+    -d :debug\ mode
+  ].each_slice(2){|ar| on(*ar)}
+
+  parse(ARGV)
+}
+
+opt = ARGV.getopts("d")
+
+p args, opt
+
+
+$:.unshift(Pathname(__FILE__).dirname.expand_path.to_s + "/src")
+
+$imagepath = args.first || "image/fs.img"
+$image = File.binread($imagepath)
+
+if opt[?d] then
+  require_relative 'src/debug'
+else
+  load 'maintest.rb'
+end
