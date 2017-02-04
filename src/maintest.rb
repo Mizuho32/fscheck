@@ -3,24 +3,25 @@ require 'pp'
 
 #require_relative 'types'
 load 'types.rb'
+load 'report.rb'
 
 $fs = FileSystem.load_xv6_fs(fsimg: $image, block_size: 512, definition: {superblock: 1..1, inodeblock: 32..57})
 
 module MainTest
-  puts "\e[96m############## Main test ##############\e[0m",""
+  Report.puts "############## Main test ##############\n", :cyan
 
 #=begin
   class A_SuperBlock_Test < Test::Unit::TestCase
 
     class << self
       def startup 
-        puts <<-"TEST"
-\e[96m
+        Report.puts """
+
   ##############################
   # Super Block Coherence Test #
   ##############################
-\e[0m
-  TEST
+
+""", :cyan
       end
       
       def shutdown
@@ -28,59 +29,59 @@ module MainTest
     end
     
     test "superblock size Test" do
-      puts "\n\e[93mSuperblock: size test \e[0m"
+      Report.puts "\nSuperblock: size test ", :yellow
 
       assert_equal(1000, $fs.superblock[0][0].size)
 
-      puts "\n\e[92mSuperblock: size OK\e[0m"
+      Report.puts "\nSuperblock: size OK", :green
     end
 
     test "superblock nblocks Test" do
-      puts "\n\e[93mSuperblock: nblocks test\e[0m"
+      Report.puts "\nSuperblock: nblocks test", :yellow
 
       assert_equal(941, $fs.superblock[0][0].nblocks)
 
-      puts "\n\e[92mSuperblock: nblocks OK\e[0m"
+      Report.puts "\nSuperblock: nblocks OK", :green
     end
 
     test "superblock  ninodes Test" do
-      puts "\n\e[93mSuperblock: ninodes test\e[0m"
+      Report.puts "\nSuperblock: ninodes test", :yellow
 
       assert_equal(200, $fs.superblock[0][0].ninodes)
 
-      puts "\n\e[92mSuperblock: ninodes OK\e[0m"
+      Report.puts "\nSuperblock: ninodes OK", :green
     end
 
     test "superblock nlog Test" do
-      puts "\n\e[93mSuperblock: nlog test\e[0m"
+      Report.puts "\nSuperblock: nlog test", :yellow
 
       assert_equal(30, $fs.superblock[0][0].nlog)
 
-      puts "\n\e[92mSuperblock: nlog OK\e[0m"
+      Report.puts "\nSuperblock: nlog OK", :green
     end
 
     test "superblock logstart Test" do
-      puts "\n\e[93mSuperblock: logstart test\e[0m"
+      Report.puts "\nSuperblock: logstart test", :yellow
 
       assert_equal(2, $fs.superblock[0][0].logstart)
 
-      puts "\n\e[92mSuperblock: logstart OK\e[0m"
+      Report.puts "\nSuperblock: logstart OK", :green
     end
 
     test "superblock inodestart Test" do
-      puts "\n\e[93mSuperblock: inodestart test\e[0m"
+      Report.puts "\nSuperblock: inodestart test", :yellow
 
       assert_equal(32, $fs.superblock[0][0].inodestart)
 
-      puts "\n\e[92mSuperblock: inodestart OK\e[0m"
+      Report.puts "\nSuperblock: inodestart OK", :green
     end
 
     test "superblock bmapstart Test" do
-      puts "\n\e[93mSuperblock: bmapstart test\e[0m"
+      Report.puts "\nSuperblock: bmapstart test", :yellow
 
       assert_equal(58, $fs.superblock[0][0].bmapstart)
 
-      puts "\n\e[92mSuperblock: bmapstart OK\e[0m"
+      Report.puts "\nSuperblock: bmapstart OK", :green
     end
 
   end
@@ -95,13 +96,13 @@ module MainTest
     class << self
 
       def startup 
-        puts <<-"TEST"
-\e[96m
+        Report.puts """
+
   ######################################
   # Block Use and inode Coherence Test #
   ######################################
-\e[0m
-  TEST
+
+""", :cyan
       end
       
       def shutdown
@@ -110,7 +111,7 @@ module MainTest
 
 
     test "bitmapblock: block use Test" do
-      puts "\n\e[93mBitmapblock: test\e[0m"
+      Report.puts "\nBitmapblock: test", :yellow
 
       used_from_inode = $fs.inodeblocks.map{|inode| inode.all_using_blocks }.flatten
       used_from_bitmap = Init.bitmap_use
@@ -122,17 +123,17 @@ module MainTest
         if dif.empty? then
           true
         else
-          puts "\e[91m Incoherent block#{dif} use, #{msg}. FAILED\e[0m"
+          Report.puts " Incoherent block#{dif} use, #{msg}. FAILED", :red
         end
       }
         
       assert_true( tests.all? )
 
-      puts "\n\e[92mBitmapblock: OK\e[0m"
+      Report.puts "\nBitmapblock: OK", :green
     end
 
     test "inodeblock: used block must referenced from only one inode test" do
-      puts "\n\e[93mInodeblock: duplicate block use test\e[0m"
+      Report.puts "\nInodeblock: duplicate block use test", :yellow
 
       dups = Init.used_from_inode
         .inject({}){|h,(k,v)| 
@@ -141,28 +142,28 @@ module MainTest
         }
         .delete_if{|k,v| v.one?}
         .each{|block, inodes|
-          puts "\e[91m block[#{block}] is used by inode#{inodes.map{|inode| inode.inode_index}}. FAILED\e[0m"
+          Report.puts " block[#{block}] is used by inode#{inodes.map{|inode| inode.inode_index}}. FAILED", :red
         }
           
       assert_true( dups.empty? )
-      puts "\n\e[92mInodeblock: no duplicate block use. OK\e[0m"
+      Report.puts "\nInodeblock: no duplicate block use. OK", :green
     end
 
     test "inodeblock: type test" do
-      puts "\n\e[93mInodeblock: type test\e[0m"
+      Report.puts "\nInodeblock: type test", :yellow
 
       result = Init.used_from_inode.keys.map{|inode|
         type = inode.type
         inum = inode.inode_index
         unless 1 <= type && type <= 3 then
-          puts "\e[91m type of inode[#{inum}] is #{type}. FAILED\e[0m"
+          Report.puts " type of inode[#{inum}] is #{type}. FAILED", :red
           next(false)
         end
 
         if type == FileSystem::DinodeBlockChunk::T_DEV then
           maj,min = inode.major, inode.minor
           if maj.zero? || min.zero? then
-            puts "\e[91m major and minor of dev inode[#{inum}] is #{maj},#{min}. FAILED\e[0m"
+            Report.puts " major and minor of dev inode[#{inum}] is #{maj},#{min}. FAILED", :red
             next(false)
           end
         end
@@ -170,11 +171,11 @@ module MainTest
       }
 
       assert_true( result.all? )
-      puts "\n\e[92mInodeblock: type OK\e[0m"
+      Report.puts "\nInodeblock: type OK", :green
     end
 
     test "inodeblock: nlink test" do
-      puts "\n\e[93mInodeblock: nlink test\e[0m"
+      Report.puts "\nInodeblock: nlink test", :yellow
       inum_to_linkednum = Init.used_from_inode.keys
         .select{|inode| inode.type == FileSystem::DinodeBlockChunk::T_DIR}
         .inject({}){|hash, inode| # inode that points dir
@@ -202,23 +203,23 @@ module MainTest
           if linkednum.size - 1 == nlink then 
             true
           else
-            puts "\e[91m nlink of dir inode[#{inode_index}] is #{nlink} but dir inode[#{inode_index}] referenced from #{linkednum}. FAILED\e[0m"
+            Report.puts " nlink of dir inode[#{inode_index}] is #{nlink} but dir inode[#{inode_index}] referenced from #{linkednum}. FAILED", :red
           end
         else
           if linkednum.size == nlink then 
             true
           else
-            puts "\e[91m nlink of inode[#{inode_index}] is #{nlink} but inode[#{inode_index}] referenced from #{linkednum}. FAILED\e[0m"
+            Report.puts " nlink of inode[#{inode_index}] is #{nlink} but inode[#{inode_index}] referenced from #{linkednum}. FAILED", :red
           end
         end
       }
 
       assert_true(result.all?)
-      puts "\n\e[92mInodeblock: nlink OK\e[0m"
+      Report.puts "\nInodeblock: nlink OK", :green
     end
 
     test "inodeblock: addrs and size test" do
-      puts "\n\e[93mInodeblock: addrs and size test\e[0m"
+      Report.puts "\nInodeblock: addrs and size test", :yellow
 
       result = Init.used_from_inode.map{|inode, addr|
         #puts inode.inode_index
@@ -227,12 +228,12 @@ module MainTest
         if ceil ==  addr.size then
           Init.coherent_inodes[inode.inode_index] = true
         else
-          puts "\e[91m For inode[#{inode.inode_index}], addrs size is #{addr.size} and CEIL(size/BSIZE) is #{ceil}. FAILED\e[0m"
+          Report.puts " For inode[#{inode.inode_index}], addrs size is #{addr.size} and CEIL(size/BSIZE) is #{ceil}. FAILED", :red
         end
       }
 
       assert_true(result.all?)
-      puts "\n\e[92mInodeblock: addrs and size OK\e[0m"
+      Report.puts "\nInodeblock: addrs and size OK", :green
     end
 
   end
@@ -244,13 +245,13 @@ module MainTest
 
     class << self
       def startup 
-        puts <<-"TEST"
-\e[96m
+        Report.puts """
+
   ############################
   # Directory Coherence Test #
   ############################
-\e[0m
-TEST
+
+""", :cyan
         @dir_inodes = Init.used_from_inode.keys.select{|inode| inode.type == FileSystem::DinodeBlockChunk::T_DIR }
         @tmp = {}
       end
@@ -266,7 +267,7 @@ TEST
     end
 
     test "valid inode num referenced from directory test" do
-      puts "\n\e[93mDirectory: valid inode num referenced from directory test\e[0m"
+      Report.puts "\nDirectory: valid inode num referenced from directory test", :yellow
 
         #.values
       result = Init.used_from_inode
@@ -278,18 +279,18 @@ TEST
               if valid_inode?(file.inum) then
                 true
               else
-                puts "\e[91m invalid inode[#{file.inum}](filename: #{file.name}) referenced from inode[#{inode.inode_index}]. FAILED\e[0m"
+                Report.puts " invalid inode[#{file.inum}](filename: #{file.name}) referenced from inode[#{inode.inode_index}]. FAILED", :red
               end
             } 
           end
         }
 
       assert_true( result.flatten.all? )
-      puts "\n\e[92mDirectory: valid inode num referenced from directory OK\e[0m\n"
+      Report.puts "\nDirectory: valid inode num referenced from directory OK\n", :green
     end
 
     test "for root, valid . and .. test" do
-      puts "\n\e[93mDirectory: for root, valid . and .. test\e[0m"
+      Report.puts "\nDirectory: for root, valid . and .. test", :yellow
 
       root = C_Directory_Test.dir_inodes.select{|i| i.inode_index == 1}.first
       files = root.all_addrs.inject([]){|o, addr| 
@@ -300,16 +301,16 @@ TEST
         if root.inode_index == inum then
           true
         else
-          puts "\e[91m #{file.name} of inode[#{root.inode_index}] invalid. (points #{inum} but #{root.inode_index} expected). FAILED\e[0m"
+          Report.puts " #{file.name} of inode[#{root.inode_index}] invalid. (points #{inum} but #{root.inode_index} expected). FAILED", :red
         end
       }
       
       assert_true( result.all? )
-      puts "\n\e[92mDirectory: For root, valid . and .. OK\e[0m\n"
+      Report.puts "\nDirectory: For root, valid . and .. OK\n", :green
     end
 
     test "for nonroots, valid . and .. test" do
-      puts "\n\e[93mDirectory: for nonroots, valid . and .. test\e[0m"
+      Report.puts "\nDirectory: for nonroots, valid . and .. test", :yellow
 
       nonroots = C_Directory_Test.dir_inodes.select{|i| i.inode_index != 1}
       result = nonroots.map{|dir|
@@ -325,7 +326,7 @@ TEST
             if inum == dir.inode_index then
               true
             else
-              puts "\e[91m . of inode[#{dir.inode_index}] invalid. (points #{inum} but #{dir.inode_index} expected. FAILED.\e[0m"
+              Report.puts " . of inode[#{dir.inode_index}] invalid. (points #{inum} but #{dir.inode_index} expected. FAILED.", :red
             end
           else
             parents_childs = $fs.inodeblock[inum/8][inum%8]
@@ -336,18 +337,18 @@ TEST
             if parent_includes_me then
               true
             else
-              puts "\e[91m .. of inode[#{dir.inode_index}] invalid. (points #{inum} but inode[#{inum}] doesnt include me(inode[#{dir.inode_index}]). FAILED\e[0m"
+              Report.puts " .. of inode[#{dir.inode_index}] invalid. (points #{inum} but inode[#{inum}] doesnt include me(inode[#{dir.inode_index}]). FAILED", :red
             end
           end
         }.all?
       }
 
       assert_true(result.all?)
-      puts "\n\e[92mDirectory: For nonroots, valid . and .. OK\e[0m\n"
+      Report.puts "\nDirectory: For nonroots, valid . and .. OK\n", :green
       end
 
     test "A directory referenced from parent and child's .. test" do
-      puts "\n\e[93mDirectory: A directory referenced from parent and child's .. test\e[0m"
+      Report.puts "\nDirectory: A directory referenced from parent and child's .. test", :yellow
 
       # { .. => [inodes] }
       #dotdot_points_inodes = Directory_Test.dir_inodes.group_by{|inode|
@@ -392,18 +393,18 @@ TEST
         if diff.empty? then
           true
         else
-          puts "\e[91m None of parent, children, current inode(inode[#{diff.map{|i|i.inode_index}.join(", ")}]) points me(inode[#{inode.inode_index}]). FAILED\e[0m"
+          Report.puts " None of parent, children, current inode(inode[#{diff.map{|i|i.inode_index}.join(", ")}]) points me(inode[#{inode.inode_index}]). FAILED", :red
         end
       }
         
       #p refed_refs_pair
 
       assert_true(result.all?)
-      puts "\n\e[92mDirectory: A directory referenced from parent and child's ..  OK\e[0m\n"
+      Report.puts "\nDirectory: A directory referenced from parent and child's ..  OK\n", :green
     end
 
     test ". not counted test" do
-      puts "\n\e[93mDirectory: . not counted test\e[0m"
+      Report.puts "\nDirectory: . not counted test", :yellow
 
       result = C_Directory_Test.dir_inodes.map{|inode|
         chi = C_Directory_Test.tmp[:inode_child][inode].size
@@ -411,14 +412,14 @@ TEST
         if diff.zero? then
           true
         elsif diff > 0
-          puts "\e[91m nlink of inode[#{inode.inode_index}] too many. (#{inode.nlink} nlink, 1 parent and #{chi} children) FAILED\e[0m"
+          Report.puts " nlink of inode[#{inode.inode_index}] too many. (#{inode.nlink} nlink, 1 parent and #{chi} children) FAILED", :red
         else # diff < 0
-          puts "\e[91m nlink of inode[#{inode.inode_index}] too few. (#{inode.nlink} nlink, 1 parent and #{chi} children)FAILED\e[0m"
+          Report.puts " nlink of inode[#{inode.inode_index}] too few. (#{inode.nlink} nlink, 1 parent and #{chi} children)FAILED", :red
         end
       }
 
       assert_true(result.all?)
-      puts "\n\e[92mDirectory: . not counted OK\e[0m\n"
+      Report.puts "\nDirectory: . not counted OK\n", :green
     end
 
   end
@@ -456,55 +457,10 @@ class Init
     end
     attr_reader :bitmap_use, :used_from_inode, :coherent_inodes
 
-
-    def report
-      path = File.dirname($imagepath)
-      name = File.basename($imagepath, ".img")
-
-      repo = <<-"REPO"
-<!DOCTYPE html>
-
-<html>
-	<head>
-		<meta charset="utf-8">
-		<title>#{name}</title>
-	</head>
-	<body>
-    <pre>
-All bitmap flag
-#{@bitmap_use}
-
-All block use from inodes
-#{$fs.inodeblocks.map{|inode| inode.all_using_blocks}.flatten}
-
-Inodes:
-#{@used_from_inode.map{|inode, all_addrs|
-  inode.to_s + "all addrs:\n#{all_addrs}"
-}.join("\n\n")}
-
-Dirs:
-#{
-  @used_from_inode.keys
-    .select{|inode| inode.type == FileSystem::DinodeBlockChunk::T_DIR}
-    .map{|inode| 
-      "inum: #{inode.inode_index}\n" +
-      inode.all_addrs.map{|block_index|
-        $fs[block_index].select{|file| !file.inum.zero?}.map{|file|
-          "\t#{file.inum}: #{file.name}"
-        }.join("\n")
-      }.join("\n")
-    }.join("\n")
-}
-    <pre>
-  </body>
-</html>
-REPO
-      File.write(path + "/html/" + name + ".html", repo)
-    end
-
   end
 end
 
 Init.init()
+Report.init()
 Test::Unit::AutoRunner.run
-#Init.report()
+Report.report()
