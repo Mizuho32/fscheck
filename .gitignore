@@ -6,6 +6,7 @@
 *.rbc
 *.old
 *.zip
+*.html
 tags
 /.config
 /coverage/
