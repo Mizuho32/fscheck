@@ -14,7 +14,7 @@ args =  OptionParser.new.instance_eval {
 
   %w[
     -d :debug\ mode
-    -a :check\all\ images\ under\ specified irectory
+    -a :check\ all\ images\ under\ specified\ directory
   ].each_slice(2){|ar| on(*ar)}
 
   parse(ARGV)
