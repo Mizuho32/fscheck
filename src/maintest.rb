@@ -235,7 +235,6 @@ module MainTest
 
     test "Inodeblock: addrs and size test" do
       Report.catch(method_name){
-        Report.puts "\nInodeblock: addrs and size test", :yellow
 
         result = Init.used_from_inode.map{|inode, addr|
           #puts inode.inode_index
