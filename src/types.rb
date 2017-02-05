@@ -84,7 +84,7 @@ class FileSystem
     cur = @blocks[i]
 
     if Range === i then
-      cur = [nil] if cur.nil?
+      cur = [nil] if cur.nil? || cur.empty?
       any_nil = cur.any?(&:nil?)
       raise Exception.new("Unable to access chunked block") if(@chunked_block.values.any?{|r| r.include?(i.max) || r.include?(i.min) } && any_nil)
       if any_nil then
