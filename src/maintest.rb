@@ -44,7 +44,14 @@ module MainTest
     test "Superblock: size test" do
       Report.catch(method_name){
 
-        assert_equal(1000, $fs.superblock[0][0].size)
+        actualblock_num = $fs.image.size/$fs.block_size
+        size = $fs.superblock[0][0].size
+
+        if size > actualblock_num then
+          Report.puts " size(#{size}) bigger than actual blocks num(#{actualblock_num}). FAILED", :red
+          Init.invalid_superblock = true
+        end
+        assert_true( size <= actualblock_num)
 
       }
     end
@@ -52,7 +59,17 @@ module MainTest
     test "Superblock: nblocks test" do
       Report.catch(method_name){
 
-        assert_equal(941, $fs.superblock[0][0].nblocks)
+        sb = $fs.superblock[0][0]
+        bmapsize = sb.size/(512*8)+1
+        #(size -1) - (bmapstart+bmapsize -1)
+        expected_nblocks = sb.size-1 - (sb.bmapstart+bmapsize -1)
+        nblocks = sb.nblocks
+
+        if expected_nblocks != nblocks
+          Report.puts(" nblocks(#{nblocks}) expected to be #{expected_nblocks} from superblock.size. FAILED", :red)
+          Init.invalid_superblock = true
+        end
+        assert_equal(expected_nblocks, nblocks)
 
       }
     end
@@ -60,7 +77,18 @@ module MainTest
     test "Superblock: ninodes test" do
       Report.catch(method_name){
 
-        assert_equal(200, $fs.superblock[0][0].ninodes)
+        sb = $fs.superblock[0][0]
+        expected_ninodes = (sb.bmapstart-sb.inodestart)*8
+        ninodes = sb.ninodes
+
+        if ninodes > expected_ninodes then
+          Report.puts(" ninodes(#{ninodes}) bigger than expected ninodes #{expected_ninodes} from superblock.bmapstart(#{sb.bmapstart}) and inodestart(#{sb.inodestart}). FAILED", :red)
+          Init.invalid_superblock = true
+        elsif ninodes < expected_ninodes then
+          Report.puts(" [WARNING] ninodes(#{ninodes}) less than expected ninodes #{expected_ninodes} from superblock.bmapstart(#{sb.bmapstart}) and inodestart(#{sb.inodestart}).", :yellow)
+        end
+          
+        assert_true(ninodes <= expected_ninodes)
 
       }
     end
@@ -68,7 +96,16 @@ module MainTest
     test "Superblock: nlog test" do
       Report.catch(method_name){
 
-        assert_equal(30, $fs.superblock[0][0].nlog)
+        sb = $fs.superblock[0][0]
+        expected_nlog = sb.inodestart - sb.logstart
+        nlog = sb.nlog
+
+        if expected_nlog != nlog
+          Report.puts(" nlog(#{nlog}) expected to be #{expected_nlog} from superblock.logstart(#{sb.logstart}) and inodestart(#{sb.inodestart}). FAILED", :red)
+          Init.invalid_superblock = true
+        end
+
+        assert_equal(expected_nlog, nlog)
 
       }
     end
@@ -84,7 +121,9 @@ module MainTest
     test "Superblock: inodestart test" do
       Report.catch(method_name){
 
-        assert_equal(32, $fs.superblock[0][0].inodestart)
+        
+        sb = $fs.superblock[0][0]
+        assert_equal(sb.logstart + sb.nlog, sb.inodestart)
 
       }
     end
@@ -92,7 +131,9 @@ module MainTest
     test "Superblock: bmapstart test" do
       Report.catch(method_name){
 
-        assert_equal(58, $fs.superblock[0][0].bmapstart)
+        sb = $fs.superblock[0][0]
+        minimum_bmapstart = sb.inodestart+sb.ninodes/8+1
+        assert_true(minimum_bmapstart <= sb.bmapstart)
 
       }
     end
@@ -102,7 +143,7 @@ module MainTest
 
 #=end
 
-#=begin
+=begin
   class B_BlockUse_Test < Test::Unit::TestCase
     include MainTest
     self.test_order = :defined
@@ -251,9 +292,9 @@ module MainTest
     end
 
   end
-#=end
+=end
 
-#=begin
+=begin
   class C_Directory_Test < Test::Unit::TestCase
     include MainTest
     self.test_order = :defined
@@ -436,7 +477,7 @@ module MainTest
     end
 
   end
-#=end
+=end
 end # module
 
 class Init
@@ -464,8 +505,10 @@ class Init
           end
         }
       @coherent_inodes = []
+      @invalid_superblock = false
     end
     attr_reader :bitmap_use, :used_from_inode, :coherent_inodes
+    attr_accessor :invalid_superblock
 
     def run
       dir = File.dirname($imagepath) + "/html"
