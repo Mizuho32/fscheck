@@ -8,7 +8,6 @@ load 'report.rb'
 Report.init()
 
 module MainTest
-  Report.puts "############## Main test ##############\n", :cyan
 
   def setup
     Report.puts("\n" + method_name[/test: (.+)/, 1], :yellow)
@@ -469,6 +468,9 @@ class Init
     attr_reader :bitmap_use, :used_from_inode, :coherent_inodes
 
     def run
+      dir = File.dirname($imagepath) + "/html"
+      Dir::mkdir(dir) unless File.exist?(dir)
+      Report.puts "############## Main test #{$imagepath} ##############\n", :cyan
       Init.init()
       Test::Unit::AutoRunner.run
     end

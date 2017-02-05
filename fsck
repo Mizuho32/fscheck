@@ -23,7 +23,6 @@ args =  OptionParser.new.instance_eval {
 opt = ARGV.getopts("ad")
 $:.unshift(Pathname(__FILE__).dirname.expand_path.to_s + "/src")
 
-
 if opt[?d] then
   $imagepath = args.first || "image/fs.img"
   $image = File.binread($imagepath)
@@ -40,8 +39,7 @@ elsif opt[?a] then
     $image = File.binread($imagepath)
     $fs = FileSystem.load_xv6_fs(fsimg: $image, block_size: 512, definition: {superblock: 1..1, inodeblock: 32..57})
     
-    Init.init()
-    Test::Unit::AutoRunner.run
+    Init.run()
     Report.report()
     results[path] = $result
   }
