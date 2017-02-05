@@ -143,7 +143,7 @@ module MainTest
 
 #=end
 
-=begin
+#=begin
   class B_BlockUse_Test < Test::Unit::TestCase
     include MainTest
     self.test_order = :defined
@@ -151,13 +151,28 @@ module MainTest
     class << self
 
       def startup 
+        color = if inv = Init.invalid_superblock then
+            :yellow
+          else
+            :cyan
+          end
         Report.puts """
 
   ######################################
   # Block Use and inode Coherence Test #
+#{
+  if inv then
+<<-"W"
+  #     AARNING: Invalid superblock.   #
+  #         tests may fail             #
   ######################################
+W
+  else
+  "  ######################################"
+  end
+}
 
-""", :cyan
+""", color
       end
       
       def shutdown
@@ -292,22 +307,38 @@ module MainTest
     end
 
   end
-=end
+#=end
 
-=begin
+#=begin
   class C_Directory_Test < Test::Unit::TestCase
     include MainTest
     self.test_order = :defined
 
     class << self
       def startup 
+        color = if inv = Init.invalid_superblock then
+            :yellow
+          else
+            :cyan
+          end
+
         Report.puts """
 
-  ############################
-  # Directory Coherence Test #
-  ############################
+  ######################################
+  #      Directory Coherence Test      #
+#{
+  if inv then
+"""\
+  #     WARNING: Invalid superblock.   #
+  #         tests may fail             #
+  ######################################
+"""
+  else
+  "  ######################################"
+  end
+}  
 
-""", :cyan
+""", color
         @dir_inodes = Init.used_from_inode.keys.select{|inode| inode.type == FileSystem::DinodeBlockChunk::T_DIR }
         @tmp = {}
       end
@@ -477,7 +508,7 @@ module MainTest
     end
 
   end
-=end
+#=end
 end # module
 
 class Init
