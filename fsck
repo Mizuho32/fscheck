@@ -37,7 +37,7 @@ elsif opt[?a] then
   Dir::glob(dir + "/*.img").each{|path|
     $imagepath = path
     $image = File.binread($imagepath)
-    $fs = FileSystem.load_xv6_fs(fsimg: $image, block_size: 512, definition: {superblock: 1..1, inodeblock: 32..57})
+    $fs = FileSystem.load_xv6_fs(fsimg: $image, block_size: 512, definition: {superblock: 1..1})
     
     Init.run()
     Report.report()
@@ -53,7 +53,7 @@ else
 
   $imagepath = args.first || "image/fs.img"
   $image = File.binread($imagepath)
-  $fs = FileSystem.load_xv6_fs(fsimg: $image, block_size: 512, definition: {superblock: 1..1, inodeblock: 32..57})
+  $fs = FileSystem.load_xv6_fs(fsimg: $image, block_size: 512, definition: {superblock: 1..2})
 
   Init.run
   Report.report()
